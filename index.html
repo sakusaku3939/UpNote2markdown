@@ -359,6 +359,7 @@
     <span class="badge">✦ 数式 \_ / \\ 修正</span>
     <span class="badge">✦ ゼロ幅スペース除去</span>
     <span class="badge">✦ テーブル内 &lt;br&gt; 除去</span>
+    <span class="badge">✦ 単独行 &lt;br&gt; 除去</span>
   </div>
 </header>
 
@@ -488,6 +489,10 @@ function fixHeadingOnlyBr(text) {
   return text.replace(/^#{1,6} <br>\s*$/gm, '');
 }
 
+function fixStandaloneBr(text) {
+  return text.replace(/^<br>\s*$/gm, '');
+}
+
 function fixBrInTable(text) {
   return text.split('\n').map(line => {
     if (line.trim().startsWith('|') && line.includes('<br>')) {
@@ -509,6 +514,7 @@ function fixContent(content) {
       chunk = fixEscapedDotInHeadings(chunk);
       chunk = fixBrAfterImage(chunk);
       chunk = fixHeadingOnlyBr(chunk);
+      chunk = fixStandaloneBr(chunk);
       chunk = fixBrInTable(chunk);
       chunk = fixMathInBlock(chunk);
     }

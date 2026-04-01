@@ -11,6 +11,7 @@ UpNote から Obsidian へエクスポートした Markdown ファイルを
   6. 数式ブロック内の \\\\cmd → \\cmd  (例: $$\\\\hat{p}$$ → $$\\hat{p}$$)
   7. ゼロ幅スペース (U+200B) を除去
   8. テーブルセル内の <br> を除去   (例: value<br> → value)
+  9. 単独行の <br> を空行に置換     (例: \n<br>\n → \n\n)
 """
 
 import os
@@ -82,6 +83,11 @@ def fix_heading_only_br(text: str) -> str:
     return re.sub(r'^#{1,6} <br>\s*$', '', text, flags=re.MULTILINE)
 
 
+def fix_standalone_br(text: str) -> str:
+    """単独行の <br>（段落区切りとして挿入されたもの）を空行に置換する。"""
+    return re.sub(r'^<br>\s*$', '', text, flags=re.MULTILINE)
+
+
 def fix_br_in_table(text: str) -> str:
     """テーブルセル内の <br> を除去する（| で囲まれた行のみ対象）。"""
     lines = text.split('\n')
@@ -112,6 +118,7 @@ def fix_content(content: str) -> str:
             chunk = fix_escaped_dot_in_headings(chunk)
             chunk = fix_br_after_image(chunk)
             chunk = fix_heading_only_br(chunk)
+            chunk = fix_standalone_br(chunk)
             chunk = fix_br_in_table(chunk)
             chunk = fix_math_in_block(chunk)
         processed.append(chunk)
