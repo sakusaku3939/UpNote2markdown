@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UpNote2Markdown Converter</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #6c63ff;
+      --accent-hover: #7d75ff;
+      --text: #e8eaf6;
+      --text-muted: #6b7280;
+      --success: #34d399;
+      --danger: #f87171;
+      --radius: 12px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 24px 32px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    header p {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 32px;
+      gap: 20px;
+    }
+
+    /* Drop zone */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--surface);
+    }
+
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(108, 99, 255, 0.06);
+    }
+
+    .dropzone svg {
+      width: 40px;
+      height: 40px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .dropzone p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .dropzone p strong {
+      color: var(--accent);
+    }
+
+    .dropzone input[type="file"] {
+      display: none;
+    }
+
+    /* Editor panels */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      flex: 1;
+    }
+
+    @media (max-width: 768px) {
+      .panels { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .char-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    textarea {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      padding: 16px;
+      resize: vertical;
+      min-height: 420px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--border); }
+
+    .btn-success {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+    .btn-success:hover { background: rgba(52, 211, 153, 0.25); }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Action bar */
+    .action-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stats {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .stats .changed {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    /* File list mode */
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .file-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .file-item .file-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(108, 99, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .file-item .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-item .file-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-item .file-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .file-status {
+      font-size: 0.75rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .file-status.changed {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--success);
+    }
+
+    .file-status.unchanged {
+      background: var(--surface2);
+      color: var(--text-muted);
+    }
+
+    /* Mode tabs */
+    .mode-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 10px;
+      width: fit-content;
+    }
+
+    .mode-tab {
+      padding: 6px 16px;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .mode-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Section hidden */
+    .hidden { display: none !important; }
+
+    footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>UpNote<span>2</span>Markdown</h1>
+  <p>UpNote からエクスポートした Markdown を標準形式に変換します</p>
+  <div class="badges">
+    <span class="badge">✦ \[ \] エスケープ除去</span>
+    <span class="badge">✦ 見出し内数字エスケープ除去</span>
+    <span class="badge">✦ 画像後の &lt;br&gt; 除去</span>
+    <span class="badge">✦ 数式 \_ / \\ 修正</span>
+    <span class="badge">✦ ゼロ幅スペース除去</span>
+    <span class="badge">✦ テーブル内 &lt;br&gt; 除去</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Mode tabs -->
+  <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+    <div class="mode-tabs">
+      <button class="mode-tab active" onclick="setMode('text')">テキスト貼り付け</button>
+      <button class="mode-tab" onclick="setMode('file')">ファイル変換</button>
+    </div>
+  </div>
+
+  <!-- TEXT MODE -->
+  <div id="text-mode">
+    <div class="action-bar" style="margin-bottom:12px;">
+      <button class="btn btn-primary" onclick="convertText()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+        変換
+      </button>
+      <button class="btn btn-ghost" onclick="clearAll()">クリア</button>
+      <div class="stats" id="text-stats"></div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label">変換前 (入力)</span>
+          <span class="char-count" id="input-count">0 文字</span>
+        </div>
+        <textarea id="input-text" placeholder="UpNote からエクスポートした Markdown をここに貼り付けてください..." oninput="updateCount()"></textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label">変換後 (出力)</span>
+          <div class="panel-actions">
+            <button class="btn btn-success" id="copy-btn" onclick="copyOutput()" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              コピー
+            </button>
+            <button class="btn btn-ghost" id="dl-btn" onclick="downloadText()" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              ダウンロード
+            </button>
+          </div>
+        </div>
+        <textarea id="output-text" placeholder="変換結果がここに表示されます" readonly></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILE MODE -->
+  <div id="file-mode" class="hidden">
+
+    <!-- Drop zone -->
+    <label class="dropzone" id="dropzone" for="file-input">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px; display:block;">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
+      </svg>
+      <p><strong>クリックしてファイルを選択</strong>、またはここにドラッグ＆ドロップ</p>
+      <p style="margin-top:6px; font-size:0.78rem;">.md ファイルを複数選択できます</p>
+      <input type="file" id="file-input" accept=".md" multiple onchange="handleFiles(this.files)">
+    </label>
+
+    <!-- File results -->
+    <div id="file-results" class="hidden">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+        <span id="file-summary" style="font-size:0.85rem; color:var(--text-muted);"></span>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="btn btn-ghost" onclick="clearFiles()">クリア</button>
+          <button class="btn btn-success" id="dl-all-btn" onclick="downloadAll()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            全てダウンロード (ZIP)
+          </button>
+        </div>
+      </div>
+      <div class="file-list" id="file-list"></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <a href="https://github.com/sakusaku3939/UpNote2markdown" target="_blank">sakusaku3939/UpNote2markdown</a>
+</footer>
+
+<!-- JSZip for multi-file download -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+// ─── Conversion logic (ported from fix_markdown.py) ───────────────────────
+
+function splitByCodeBlocks(content) {
+  const pattern = /```[\s\S]*?```/g;
+  const parts = [];
+  let last = 0, m;
+  while ((m = pattern.exec(content)) !== null) {
+    if (m.index > last) parts.push([false, content.slice(last, m.index)]);
+    parts.push([true, m[0]]);
+    last = m.index + m[0].length;
+  }
+  if (last < content.length) parts.push([false, content.slice(last)]);
+  return parts;
+}
+
+function fixMathInBlock(text) {
+  return text.replace(/\$\$[\s\S]+?\$\$/g, math => {
+    math = math.replace(/\\_/g, '_');
+    math = math.replace(/\\\\([a-zA-Z{}\[\]])/g, '\\$1');
+    return math;
+  });
+}
+
+function fixEscapedBrackets(text) {
+  return text.replace(/\\\[/g, '[').replace(/\\\]/g, ']');
+}
+
+function fixEscapedDotInHeadings(text) {
+  return text.replace(/^(#{1,6} .*?)(\d+)\\\./gm, '$1$2.');
+}
+
+function fixBrAfterImage(text) {
+  return text.replace(/(!\[.*?\]\([^)]*\))<br>/g, '$1');
+}
+
+function fixHeadingOnlyBr(text) {
+  return text.replace(/^#{1,6} <br>\s*$/gm, '');
+}
+
+function fixBrInTable(text) {
+  return text.split('\n').map(line => {
+    if (line.trim().startsWith('|') && line.includes('<br>')) {
+      return line.replace(/<br>/g, '');
+    }
+    return line;
+  }).join('\n');
+}
+
+function removeZeroWidthSpaces(text) {
+  return text.replace(/\u200b/g, '');
+}
+
+function fixContent(content) {
+  const parts = splitByCodeBlocks(content);
+  let result = parts.map(([isCode, chunk]) => {
+    if (!isCode) {
+      chunk = fixEscapedBrackets(chunk);
+      chunk = fixEscapedDotInHeadings(chunk);
+      chunk = fixBrAfterImage(chunk);
+      chunk = fixHeadingOnlyBr(chunk);
+      chunk = fixBrInTable(chunk);
+      chunk = fixMathInBlock(chunk);
+    }
+    return chunk;
+  }).join('');
+  return removeZeroWidthSpaces(result);
+}
+
+// ─── Mode switching ────────────────────────────────────────────────────────
+
+function setMode(mode) {
+  document.getElementById('text-mode').classList.toggle('hidden', mode !== 'text');
+  document.getElementById('file-mode').classList.toggle('hidden', mode !== 'file');
+  document.querySelectorAll('.mode-tab').forEach((t, i) => {
+    t.classList.toggle('active', (mode === 'text' && i === 0) || (mode === 'file' && i === 1));
+  });
+}
+
+// ─── Text mode ─────────────────────────────────────────────────────────────
+
+function updateCount() {
+  const len = document.getElementById('input-text').value.length;
+  document.getElementById('input-count').textContent = len.toLocaleString() + ' 文字';
+}
+
+function convertText() {
+  const input = document.getElementById('input-text').value;
+  if (!input.trim()) return;
+  const output = fixContent(input);
+  document.getElementById('output-text').value = output;
+
+  // stats
+  const inLines = input.split('\n');
+  const outLines = output.split('\n');
+  let diffCount = 0;
+  const max = Math.max(inLines.length, outLines.length);
+  for (let i = 0; i < max; i++) {
+    if (inLines[i] !== outLines[i]) diffCount++;
+  }
+  const stats = document.getElementById('text-stats');
+  if (diffCount > 0) {
+    stats.innerHTML = `<span class="changed">${diffCount} 行を修正しました</span>`;
+  } else {
+    stats.textContent = '変更なし';
+  }
+
+  document.getElementById('copy-btn').disabled = false;
+  document.getElementById('dl-btn').disabled = false;
+}
+
+function clearAll() {
+  document.getElementById('input-text').value = '';
+  document.getElementById('output-text').value = '';
+  document.getElementById('text-stats').textContent = '';
+  document.getElementById('input-count').textContent = '0 文字';
+  document.getElementById('copy-btn').disabled = true;
+  document.getElementById('dl-btn').disabled = true;
+}
+
+function copyOutput() {
+  const text = document.getElementById('output-text').value;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.innerHTML;
+    btn.textContent = 'コピーしました!';
+    setTimeout(() => { btn.innerHTML = orig; }, 1800);
+  });
+}
+
+function downloadText() {
+  const text = document.getElementById('output-text').value;
+  downloadBlob(new Blob([text], { type: 'text/markdown' }), 'converted.md');
+}
+
+// ─── File mode ─────────────────────────────────────────────────────────────
+
+let processedFiles = []; // [{name, original, converted}]
+
+function handleFiles(files) {
+  if (!files.length) return;
+  processedFiles = [];
+  const readers = Array.from(files).map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const original = e.target.result;
+      const converted = fixContent(original);
+      resolve({ name: file.name, original, converted });
+    };
+    reader.readAsText(file, 'utf-8');
+  }));
+
+  Promise.all(readers).then(results => {
+    processedFiles = results;
+    renderFileList();
+  });
+}
+
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  const results = document.getElementById('file-results');
+  results.classList.remove('hidden');
+
+  const changed = processedFiles.filter(f => f.original !== f.converted).length;
+  document.getElementById('file-summary').textContent =
+    `${processedFiles.length} ファイル処理 — ${changed} ファイルを修正`;
+
+  list.innerHTML = processedFiles.map((f, i) => {
+    const isChanged = f.original !== f.converted;
+    const lines = f.original.split('\n').length;
+    return `
+      <div class="file-item">
+        <div class="file-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="file-info">
+          <div class="file-name">${escapeHtml(f.name)}</div>
+          <div class="file-meta">${lines.toLocaleString()} 行</div>
+        </div>
+        <span class="file-status ${isChanged ? 'changed' : 'unchanged'}">
+          ${isChanged ? '変更あり' : '変更なし'}
+        </span>
+        <button class="btn btn-ghost" onclick="downloadFile(${i})" style="padding:6px 14px; font-size:0.78rem;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          DL
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function downloadFile(index) {
+  const f = processedFiles[index];
+  downloadBlob(new Blob([f.converted], { type: 'text/markdown' }), f.name);
+}
+
+async function downloadAll() {
+  const zip = new JSZip();
+  processedFiles.forEach(f => zip.file(f.name, f.converted));
+  const blob = await zip.generateAsync({ type: 'blob' });
+  downloadBlob(blob, 'converted_markdown.zip');
+}
+
+function clearFiles() {
+  processedFiles = [];
+  document.getElementById('file-results').classList.add('hidden');
+  document.getElementById('file-input').value = '';
+}
+
+// ─── Drag and drop ─────────────────────────────────────────────────────────
+
+const dropzone = document.getElementById('dropzone');
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.md'));
+  if (files.length) handleFiles(files);
+});
+
+// ─── Utils ─────────────────────────────────────────────────────────────────
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+</body>
+</html>
