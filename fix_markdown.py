@@ -84,8 +84,8 @@ def fix_heading_only_br(text: str) -> str:
 
 
 def fix_standalone_br(text: str) -> str:
-    """単独行の <br>（段落区切りとして挿入されたもの）を空行に置換する。"""
-    return re.sub(r'^<br>\s*$', '', text, flags=re.MULTILINE)
+    """単独行の <br>（段落区切りとして挿入されたもの）を行ごと除去する。"""
+    return re.sub(r'^<br>[ \t]*\n', '', text, flags=re.MULTILINE)
 
 
 def fix_br_in_table(text: str) -> str:
