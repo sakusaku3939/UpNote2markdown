@@ -1,0 +1,9 @@
+# UpNote エクスポートの出力・バックアップフォルダ（タイムスタンプ付き）
+UpNote_*/
+
+# ログ・ドライラン出力
+*.txt
+*.log
+
+# Claude Code の設定
+.claude/
