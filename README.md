@@ -1,8 +1,6 @@
 # UpNote2Markdown
 
-UpNote からエクスポートした Markdown を標準形式に修正するツールです。
-
-**Web版**: https://sakusaku3939.github.io/UpNote2markdown/
+UpNote からエクスポートした Markdown を標準形式に修正するツール
 
 ## 修正内容
 
@@ -20,7 +18,7 @@ UpNote からエクスポートした Markdown を標準形式に修正するツ
 
 ## 使い方
 
-### Web版（推奨）
+### Web版
 
 [https://sakusaku3939.github.io/UpNote2markdown/](https://sakusaku3939.github.io/UpNote2markdown/) をブラウザで開き、テキストを貼り付けるかファイルをドロップしてください。
 
