@@ -361,6 +361,7 @@
     <span class="badge">✦ ゼロ幅スペース除去</span>
     <span class="badge">✦ テーブル内 &lt;br&gt; 除去</span>
     <span class="badge">✦ 単独行 &lt;br&gt; 除去</span>
+    <span class="badge">✦ $$ 行末スペース除去</span>
   </div>
 </header>
 
@@ -490,6 +491,10 @@ function fixStandaloneBr(text) {
   return text.replace(/^<br>[ \t]*\n/gm, '');
 }
 
+function fixMathTrailingSpaces(text) {
+  return text.replace(/(\$\$)[ \t]+$/gm, '$1');
+}
+
 function fixBrInTable(text) {
   return text.split('\n').map(line => {
     if (line.trim().startsWith('|') && line.includes('<br>')) {
@@ -513,6 +518,7 @@ function fixContent(content) {
       chunk = fixHeadingOnlyBr(chunk);
       chunk = fixStandaloneBr(chunk);
       chunk = fixBrInTable(chunk);
+      chunk = fixMathTrailingSpaces(chunk);
       chunk = fixMathInBlock(chunk);
     }
     return chunk;

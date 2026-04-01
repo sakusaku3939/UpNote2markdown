@@ -12,6 +12,7 @@ UpNote から Obsidian へエクスポートした Markdown ファイルを
   7. ゼロ幅スペース (U+200B) を除去
   8. テーブルセル内の <br> を除去   (例: value<br> → value)
   9. 単独行の <br> を空行に置換     (例: \n<br>\n → \n\n)
+ 10. $$ 行末の余分なスペース除去    (例: $$formula$$  → $$formula$$)
 """
 
 import os
@@ -83,6 +84,12 @@ def fix_heading_only_br(text: str) -> str:
     return re.sub(r'^#{1,6} <br>\s*$', '', text, flags=re.MULTILINE)
 
 
+def fix_math_trailing_spaces(text: str) -> str:
+    """行末の $$ の後にある余分なスペース・タブを除去する。
+    一部のレンダラーは $$ の後にスペースがあると閉じタグを認識できない。"""
+    return re.sub(r'(\$\$)[ \t]+$', r'\1', text, flags=re.MULTILINE)
+
+
 def fix_standalone_br(text: str) -> str:
     """単独行の <br>（段落区切りとして挿入されたもの）を行ごと除去する。"""
     return re.sub(r'^<br>[ \t]*\n', '', text, flags=re.MULTILINE)
@@ -120,6 +127,7 @@ def fix_content(content: str) -> str:
             chunk = fix_heading_only_br(chunk)
             chunk = fix_standalone_br(chunk)
             chunk = fix_br_in_table(chunk)
+            chunk = fix_math_trailing_spaces(chunk)
             chunk = fix_math_in_block(chunk)
         processed.append(chunk)
     result = ''.join(processed)
