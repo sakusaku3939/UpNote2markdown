@@ -13,6 +13,7 @@ UpNote から Obsidian へエクスポートした Markdown ファイルを
   8. テーブルセル内の <br> を除去   (例: value<br> → value)
   9. 単独行の <br> を空行に置換     (例: \n<br>\n → \n\n)
  10. $$ 行末の余分なスペース除去    (例: $$formula$$  → $$formula$$)
+ 11. インライン $$...$$ を $...$ に変換 (例: $$X$$: 説明 → $X$: 説明)
 """
 
 import os
@@ -90,6 +91,23 @@ def fix_math_trailing_spaces(text: str) -> str:
     return re.sub(r'(\$\$)[ \t]+$', r'\1', text, flags=re.MULTILINE)
 
 
+def fix_inline_double_dollar(text: str) -> str:
+    """行内で他テキストと共存する $$...$$ をインライン数式 $...$ に変換する。
+    $$ のみの行（ディスプレイ数式ブロックの区切り）と、
+    行全体が $$...$$ だけの場合（単行ディスプレイ数式）はそのまま残す。"""
+    def process_line(line):
+        # $$ だけの行はそのまま
+        if line.strip() == '$$':
+            return line
+        # 行全体が $$...$$ のみ（前後に他テキストなし）はそのまま
+        if re.fullmatch(r'\s*\$\$[^$\n]+\$\$\s*', line):
+            return line
+        # 前後に他テキストがある $$...$$ を $...$ に変換
+        return re.sub(r'\$\$([^$\n]+?)\$\$', r'$\1$', line)
+
+    return '\n'.join(process_line(line) for line in text.split('\n'))
+
+
 def fix_standalone_br(text: str) -> str:
     """単独行の <br>（段落区切りとして挿入されたもの）を行ごと除去する。"""
     return re.sub(r'^<br>[ \t]*\n', '', text, flags=re.MULTILINE)
@@ -127,6 +145,7 @@ def fix_content(content: str) -> str:
             chunk = fix_heading_only_br(chunk)
             chunk = fix_standalone_br(chunk)
             chunk = fix_br_in_table(chunk)
+            chunk = fix_inline_double_dollar(chunk)
             chunk = fix_math_trailing_spaces(chunk)
             chunk = fix_math_in_block(chunk)
         processed.append(chunk)
